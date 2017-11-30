@@ -64,7 +64,7 @@ static ValueSet PhiClobberers(MemoryPhi *, MemorySSA &, ValueSet &Seen);
 
 
 FlowFinder::FlowSet
-FlowFinder::FindPairwise(Function &Fn, MemorySSA& MSSA) {
+FlowFinder::FindPairwise(Function &Fn, MemorySSA& MSSA) const {
   FlowFinder::FlowSet Flows;
 
   for (auto &I : instructions(Fn)) {
@@ -75,7 +75,8 @@ FlowFinder::FindPairwise(Function &Fn, MemorySSA& MSSA) {
 }
 
 FlowFinder::ValueSet
-FlowFinder::FindEventual(const FlowSet& Pairs, Value *Source, ValuePredicate F)
+FlowFinder::FindEventual(const FlowSet& Pairs, Value *Source,
+                         ValuePredicate F) const
 {
   ValueSet Seen, Sinks;
 
@@ -96,7 +97,7 @@ FlowFinder::FindEventual(const FlowSet& Pairs, Value *Source, ValuePredicate F)
 
 void FlowFinder::CollectEventual(ValueSet &Sinks, ValueSet &Seen,
                                  const FlowSet &Pairs, Value *Source,
-                                 ValuePredicate F)
+                                 ValuePredicate F) const
 {
   Seen.insert(Source);
 

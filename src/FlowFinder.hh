@@ -84,7 +84,7 @@ public:
   using FlowSet = std::multimap<Value*, std::pair<Value*, FlowKind>>;
 
   //! Find all pairwise data flows within a function.
-  FlowSet FindPairwise(Function&, llvm::MemorySSA&);
+  FlowSet FindPairwise(Function&, llvm::MemorySSA&) const;
 
   using ValueSet = std::unordered_set<Value*>;
   using ValuePredicate = std::function<bool (const Value*)>;
@@ -103,7 +103,8 @@ public:
    *
    * `FindEventual(Pairs, Source, IsSink)` will return both Sink1 and Sink2.
    */
-  ValueSet FindEventual(const FlowSet& Pairs, Value *Source, ValuePredicate P);
+  ValueSet FindEventual(const FlowSet& Pairs, Value *Source, ValuePredicate P)
+    const;
 
   /**
    * Output a GraphViz dot representation of a set of pairwise flows.
@@ -122,7 +123,7 @@ private:
    * the predicate @b F.
    */
   void CollectEventual(ValueSet &Sinks, ValueSet &Seen, const FlowSet &Pairs,
-                       Value *Source, ValuePredicate F);
+                       Value *Source, ValuePredicate F) const;
 
   const CallSemantics &CS;
 };
