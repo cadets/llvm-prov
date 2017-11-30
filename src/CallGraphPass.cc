@@ -147,6 +147,9 @@ struct DotFormat : public FileFormat {
       for (const auto &Target : Fn.CallTargets) {
         Out << "  \"" << Fn.Name << "\" -> \"" << Target << "\";\n";
       }
+      for (const auto &Source : Fn.FlowSources) {
+        Out << "  \"" << Source << "\" -> \"" << Fn.Name << "\";\n";
+      }
     }
 
     Out << "}\n";
@@ -172,10 +175,21 @@ struct JSONFormat : public FileFormat {
         << "\"calls\":["
         ;
 
-      size_t Count = 0, Targets = Fn.CallTargets.size();
+      size_t Count = 0;
+      Len = Fn.CallTargets.size();
       for (const auto &Target : Fn.CallTargets) {
         Out << "\"" << Target << "\"";
-        if ((++Count) < Targets) {
+        if ((++Count) < Len) {
+          Out << ',';
+        }
+      }
+
+      Out << "],\"flows\":[";
+
+      Count = 0, Len = Fn.FlowSources.size();
+      for (const auto &Source : Fn.FlowSources) {
+        Out << "\"" << Source << "\"";
+        if ((++Count) < Len) {
           Out << ',';
         }
       }
@@ -206,6 +220,11 @@ struct YAMLFormat : public FileFormat {
 
       for (const auto &Target : Fn.CallTargets) {
         Out << "      - " << Target << "\n";
+      }
+
+      Out << "    flows:\n";
+      for (const auto &Source : Fn.FlowSources) {
+        Out << "      - " << Source << "\n";
       }
     }
   }
