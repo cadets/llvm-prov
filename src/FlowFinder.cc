@@ -338,4 +338,16 @@ static ValueSet PhiClobberers(MemoryPhi *Phi, MemorySSA &MSSA, ValueSet &Seen)
   return Clobberers;
 }
 
+std::string llvm::prov::str(FlowFinder::FlowKind K)
+{
+  switch (K) {
+  case FlowFinder::FlowKind::Operand:
+    return "operand";
 
+  case FlowFinder::FlowKind::Memory:
+    return "memory";
+
+  case FlowFinder::FlowKind::Meta:
+    return "meta";
+  }
+}

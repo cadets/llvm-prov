@@ -128,6 +128,8 @@ private:
   const CallSemantics &CS;
 };
 
+std::string str(FlowFinder::FlowKind);
+
 } // namespace prov
 } // namespace llvm
 

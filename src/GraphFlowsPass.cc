@@ -38,24 +38,33 @@
 
 #include <llvm/Pass.h>
 #include <llvm/Analysis/MemorySSA.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/ModuleSlotTracker.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <sstream>
+#include <unordered_map>
+#include <unordered_set>
 
 using namespace llvm;
 using namespace llvm::prov;
 using namespace loom;
 using std::string;
+using std::unordered_map;
+using std::unordered_set;
 
 
-namespace llvm {
+namespace {
   struct GraphFlowsPass : public FunctionPass {
     static char ID;
-    GraphFlowsPass() : FunctionPass(ID) {}
+    GraphFlowsPass(raw_fd_ostream &Out)
+      : FunctionPass(ID), YamlOutput(Out)
+    {
+    }
 
     bool runOnFunction(Function&) override;
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -69,66 +78,164 @@ namespace llvm {
       AU.addPreserved<AAResultsWrapperPass>();
       AU.addRequiredTransitive<MemorySSAWrapperPass>();
     }
+
+  private:
+    raw_fd_ostream &YamlOutput;
   };
+
+  struct GraphFlowsModulePass : public ModulePass {
+    static char ID;
+    GraphFlowsModulePass() : ModulePass(ID) {}
+
+    bool runOnModule(Module&) override;
+  };
+
+  std::string Indent;
 }
 
-
-cl::opt<string> OutputDirectory("flow-dir", cl::init("data-flow-graphs"),
-    cl::desc("Directory for data flow graphs"), cl::value_desc("dir"));
+cl::opt<string> FlowOutputFilename("flow-output", cl::init("flows.yaml"),
+    cl::desc("Name of data flow output file (YAML format)"),
+    cl::value_desc("filename"));
 
 cl::opt<bool> ShowBasicBlocks("show-bbs", cl::init(true),
     cl::desc("Show basic blocks in data flow graphs"));
 
 bool GraphFlowsPass::runOnFunction(Function &Fn)
 {
-  // Create output directory (if it doesn't exist); open output file.
-  std::error_code Err = sys::fs::create_directory(OutputDirectory);
-  if (Err) {
-    errs() << "Error creating output directory '" << OutputDirectory << "': "
-      << Err.message() << "\n";
-    return false;
+  std::string FnName = Fn.getName();
+  YamlOutput << Indent << FnName << ":\n";
+
+  ModuleSlotTracker SlotTracker(Fn.getParent());
+  SlotTracker.incorporateFunction(Fn);
+  std::unordered_map<const Value*, std::string> Names;
+
+  std::function<std::string(const Value*, const BasicBlock*)> Name =
+    [&](const Value *V, const BasicBlock *BB) {
+      auto i = Names.find(V);
+      if (i != Names.end()) {
+        return i->second;
+      }
+
+      std::string Context = (BB ? Name(BB, nullptr) : FnName) + "::";
+      if (V->hasName()) {
+        return Context + V->getName().str();
+      }
+
+      int Slot = SlotTracker.getLocalSlot(V);
+      if (Slot >= 0) {
+        return Context + std::to_string(Slot);
+      }
+
+      return Context + std::to_string(reinterpret_cast<unsigned long long>(V));
+    };
+
+  YamlOutput << Indent << "  arguments:\n";
+  for (const Argument &A : Fn.args()) {
+    YamlOutput
+      << Indent << "    \"" << Name(&A, nullptr) << "\":\n"
+      << Indent <<"      type: \"" << *A.getType() << "\"\n"
+      << Indent <<"      label: \""
+      ;
+
+    A.print(YamlOutput);
+    YamlOutput << "\"\n";
   }
 
-  std::string Filename = (OutputDirectory + "/" + Fn.getName() + ".dot").str();
-  auto Flags = sys::fs::OpenFlags::F_RW | sys::fs::OpenFlags::F_Text;
+  PosixCallSemantics CS;
+  FlowFinder FF(CS);
+  MemorySSA &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
+  std::unordered_map<const CallInst*, const Function*> Calls;
+  FlowFinder::FlowSet Flows = FF.FindPairwise(Fn, MSSA);
 
-  raw_fd_ostream FlowGraph(Filename, Err, Flags);
+  YamlOutput << Indent << "  blocks:\n";
+
+  for (auto &BB : Fn) {
+    YamlOutput << Indent << "    \"" << Name(&BB, nullptr) << "\":\n";
+
+    for (const Instruction &I : BB) {
+      std::string InstName = Name(&I, &BB);
+      Names.emplace(&I, InstName);
+
+      if (const CallInst *Call = dyn_cast<CallInst>(&I)) {
+        if (const Function *Target = Call->getCalledFunction()) {
+          Calls.emplace(Call, Target);
+        }
+      }
+
+      YamlOutput
+        << Indent << "      \"" << InstName << "\":\n"
+        << Indent << "        opcode: { value: " << I.getOpcode()
+        << Indent << ", name: \"" << I.getOpcodeName() << "\" }\n"
+        << Indent << "        type: \"" << *I.getType() << "\"\n"
+        << Indent << "        label: \""
+        ;
+      I.print(YamlOutput);
+      YamlOutput << "\"\n";
+    }
+  }
+
+  YamlOutput << Indent << "  calls:\n";
+  for (auto i : Calls) {
+    const CallInst *Call = i.first;
+    const Function *Target = i.second;
+
+    assert(Names.find(Call) != Names.end());
+    assert(Target->hasName());
+
+    YamlOutput
+      << Indent << "    - from: \"" << Names[Call] << "\"\n"
+      << Indent << "      to: \"" << Target->getName() << "\"\n"
+      << Indent << "      kind: \"call\"\n";
+      ;
+  }
+
+  YamlOutput << Indent << "  flows:\n";
+  for (auto& Flow : Flows) {
+    const Value *Dest = Flow.first;
+    const Value *Src = Flow.second.first;
+    const FlowFinder::FlowKind Kind = Flow.second.second;
+
+    YamlOutput
+      << Indent << "    - from: \""
+      << Name(Src, nullptr) << "\"\n"
+      << Indent << "      to: \""
+      << Name(Dest, nullptr) << "\"\n"
+      << Indent << "      kind: \""
+      << str(Kind) << "\"\n"
+      ;
+  }
+
+  YamlOutput << "\n";
+
+  return false;
+}
+
+bool GraphFlowsModulePass::runOnModule(Module &M)
+{
+  std::error_code Err;
+  raw_fd_ostream FlowGraph(FlowOutputFilename, Err,
+      sys::fs::OpenFlags::F_RW | sys::fs::OpenFlags::F_Text);
 
   if (Err) {
     errs() << "Error opening graph file: " << Err.message() << "\n";
     return false;
   }
 
-  PosixCallSemantics CS;
-  FlowFinder FF(CS);
+  legacy::FunctionPassManager FPM(&M);
 
-  auto IsSink = [&CS](const Value *V) {
-    if (auto *Call = dyn_cast<CallInst>(V)) {
-        return CS.CanSink(Call);
-    }
+  FPM.add(new GraphFlowsPass(FlowGraph));
 
-    return false;
-  };
+  FlowGraph << "functions:\n";
+  Indent = "  ";
 
-  MemorySSA &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
-  FlowFinder::FlowSet Flows = FF.FindPairwise(Fn, MSSA);
-  FF.Graph(Flows, Fn.getName(), ShowBasicBlocks, FlowGraph);
-
-  for (auto& I : instructions(Fn)) {
-    if (CallInst* Source = dyn_cast<CallInst>(&I)) {
-      if (not CS.IsSource(Source)) {
-        continue;
-      }
-
-      for (Value *Sink : FF.FindEventual(Flows, Source, IsSink)) {
-        Flows.insert({ Sink, { Source, FlowFinder::FlowKind::Meta }});
-      }
-    }
+  for (Function &F : M) {
+    FPM.run(F);
   }
 
   return false;
 }
 
 char GraphFlowsPass::ID = 0;
+char GraphFlowsModulePass::ID = 0;
 
-static RegisterPass<GraphFlowsPass> X("graph-flows", "GraphFlowsPass tracking");
+static RegisterPass<GraphFlowsModulePass> X("graph-flows", "GraphFlowsPass tracking");
