@@ -57,6 +57,7 @@ namespace {
   struct FunctionData {
     const string Name;
     std::unordered_set<string> CallTargets;
+    std::unordered_set<string> FlowSources;
   };
 
   using FnVec = std::vector<const FunctionData>;
