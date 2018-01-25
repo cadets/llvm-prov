@@ -30,12 +30,12 @@
 
 find_path(LOOM_INCLUDE_DIR
 	loom/Instrumenter.hh
-	PATHS ${LOOM_PREFIX}/include /usr/local/include /usr/include
+	PATHS ${LOOM_PREFIX}/include $ENV{LOOM_PREFIX}/include /usr/local/include /usr/include
 )
 
 find_library(LOOM_LIBRARY
-  NAMES LLVMLoom LLVMLoom.so LLVMLoom.dylib
-	PATHS ${LOOM_PREFIX}/lib /usr/local/lib /usr/lib
+	NAMES LLVMLoom LLVMLoom.so LLVMLoom.dylib
+	PATHS ${LOOM_PREFIX}/lib $ENV{LOOM_PREFIX}/lib /usr/local/lib /usr/lib
 )
 
 include(FindPackageHandleStandardArgs)
