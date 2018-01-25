@@ -54,7 +54,7 @@ $ ninja
 Then set an environment variable pointing at the `llvm-prov` library and extend your `PATH` to include the llvm-prov `scripts` directory:
 
 ```sh
-$ export LLVM_PROV_LIB=/path/to/llvm-prov/build/lib/LLVMProv.so
+$ export LLVM_PROV_PREFIX=/path/to/llvm-prov/build
 $ export PATH=/path/to/llvm-prov/source/scripts:$PATH
 ```
 

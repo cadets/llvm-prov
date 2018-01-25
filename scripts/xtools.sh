@@ -47,11 +47,14 @@ find_llvm_prov_libraries()
 
 	if [ "${LOOM_LIB}" = "" ]
 	then
-		LOOM_LIB="${LLVM_PREFIX}/lib/${loomlib}"
-
-		if ! [ -e "${LOOM_LIB}" ]
+		if [ -e "${LOOM_PREFIX}/lib/${loomlib}" ]
 		then
-			echo "LOOM_LIB not specified, no ${loomlib} in LLVM_PREFIX"
+			LOOM_LIB="${LOOM_PREFIX}/lib/${loomlib}"
+		elif [ -e "${LLVM_PREFIX}/lib/${loomlib}" ]
+		then
+			LOOM_LIB="${LLVM_PREFIX}/lib/${loomlib}"
+		else
+			echo "LOOM_LIB not specified, no ${loomlib} in LOOM_PREFIX or LLVM_PREFIX"
 			exit 1
 		fi
 	fi
@@ -60,11 +63,14 @@ find_llvm_prov_libraries()
 
 	if [ "${LLVM_PROV_LIB}" = "" ]
 	then
-		LLVM_PROV_LIB="${LLVM_PREFIX}/lib/${libname}"
-
-		if ! [ -e "${LLVM_PROV_LIB}" ]
+		if [ -e "${LLVM_PROV_PREFIX}/lib/${libname}" ]
 		then
-			echo "LLVM_PROV_LIB not specified; no ${libname} in LLVM_PREFIX"
+			LLVM_PROV_LIB="${LLVM_PROV_PREFIX}/lib/${libname}"
+		elif [ -e "${LLVM_PREFIX}/lib/${libname}" ]
+		then
+			LLVM_PROV_LIB="${LLVM_PREFIX}/lib/${libname}"
+		else
+			echo "LLVM_PROV_LIB not specified, no ${libname} in LLVM_PROV_PREFIX or LLVM_PREFIX"
 			exit 1
 		fi
 	fi
