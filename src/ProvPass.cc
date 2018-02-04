@@ -96,6 +96,7 @@ bool Provenance::runOnFunction(Function &Fn)
   FlowFinder::FlowSet PairwiseFlows = FF.FindPairwise(Fn, MSSA);
 
   std::map<Value*, std::vector<Value*>> DataFlows;
+  std::unordered_set<Value*> Translated;
 
   for (auto& I : instructions(Fn)) {
     if (CallInst* Call = dyn_cast<CallInst>(&I)) {
@@ -115,7 +116,12 @@ bool Provenance::runOnFunction(Function &Fn)
     Source Source = IF->TranslateSource(dyn_cast<CallInst>(Flow.first));
 
     for (Value *SinkCall : Flow.second) {
+      if (Translated.find(SinkCall) != Translated.end()) {
+        continue;
+      }
+
       IF->TranslateSink(dyn_cast<CallInst>(SinkCall), Source);
+      Translated.insert(SinkCall);
     }
 
     ModifiedIR = true;
