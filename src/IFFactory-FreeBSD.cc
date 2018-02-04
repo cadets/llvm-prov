@@ -141,6 +141,8 @@ Source MetaIO::TranslateSource(CallInst *Call) {
 
 
 bool MetaIO::TranslateSink(CallInst *Call, const Source &S) {
+  assert(Call);
+
   Value *MetaIOPtr = S.Metadata();
   assert(MetaIOPtr->getType() == PointerType::getUnqual(MetadataType()));
 

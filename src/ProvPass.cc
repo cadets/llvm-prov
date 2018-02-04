@@ -105,6 +105,7 @@ bool Provenance::runOnFunction(Function &Fn)
       }
 
       for (Value *Sink : FF.FindEventual(PairwiseFlows, Call, IsSink)) {
+        assert(isa<CallInst>(Sink));
         DataFlows[Call].push_back(Sink);
       }
     }
@@ -120,6 +121,7 @@ bool Provenance::runOnFunction(Function &Fn)
         continue;
       }
 
+      assert(isa<CallInst>(SinkCall));
       IF->TranslateSink(dyn_cast<CallInst>(SinkCall), Source);
       Translated.insert(SinkCall);
     }
