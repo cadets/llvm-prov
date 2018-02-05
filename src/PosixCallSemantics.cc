@@ -53,7 +53,7 @@ PosixCallSemantics::PosixCallSemantics()
     { "pread", 1 },
     { "readv", 1 },
     { "preadv", 1 },
-    { "recv", 1 },
+    //{ "recv", 1 },   // TODO: add recv_metaio(2) to CADETS BSD?
     { "recvfrom", 1 },
     { "recvmsg", 1 },
     { "recvmmsg", 1 },
@@ -62,7 +62,7 @@ PosixCallSemantics::PosixCallSemantics()
     { DARWIN_SYMBOL_NAME("read"), 1 },
     { DARWIN_SYMBOL_NAME("pread"), 1 },
     { DARWIN_SYMBOL_NAME("readv"), 1 },
-    { DARWIN_SYMBOL_NAME("recv"), 1 },
+    //{ DARWIN_SYMBOL_NAME("recv"), 1 }, // TODO: add recv_metaio(2)?
     { DARWIN_SYMBOL_NAME("recvfrom"), 1 },
     { DARWIN_SYMBOL_NAME("recvmsg"), 1 },
     { DARWIN_SYMBOL_NAME("mmap"), 0 },
