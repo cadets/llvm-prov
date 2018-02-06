@@ -59,7 +59,7 @@ $ export PATH=/path/to/llvm-prov/source/scripts:$PATH
 ```
 
 
-## Build FreeBSD tools
+## Build FreeBSD
 
 Check out our version of FreeBSD with I/O metadata support and build `world`:
 
@@ -69,7 +69,10 @@ $ cd freebsd-llprov
 $ llvm-prov-make buildworld     # I often like to append: -j8 2>&1 | tee build.log
 ```
 
-Then, to play with instrumentation of a specific tool, use the `llvm-prov-make`
+
+## Build individual instrumented binaries
+
+To play with instrumentation of a specific tool, use the `llvm-prov-make`
 script to enter a build environment within the FreeBSD source tree:
 
 ```sh
@@ -79,4 +82,26 @@ $ llvm-prov-make buildenv
 After that, you should be able to enter any of the `bin` or `usr.bin`
 tool directories and run `make foo.full.instrumented` to get an instrumented
 binary, or `make foo.full.instrumented.ll` to build an instrumented textual IR
-file (more readable than binaries or `.bc` files).
+file (more readable than binaries or `.bc` files). The resulting files will end
+up in the out-of-tree build directory ("obj directory"), whose location can be found
+using `make(1)` itself:
+
+```sh
+$ make -V .OBJDIR
+/var/build/jon/obj/usr/home/jon/freebsd/llprov/bin/cp
+```
+
+You may like to compare the uninstrumented and instrumented versions of files:
+
+```sh
+$ ln -s `make -V .OBJDIR` obj      # for convenience
+$ diff obj/foo.full.ll obj/foo.full.instrumented.ll
+```
+
+Note that `/usr/local/bin` is not present in the default `PATH` within a `make buildenv`
+environment. You can, however, explicitly reference tools like `colordiff(1)`
+by referring to their full paths or by temporarily modifying `PATH`:
+
+```sh
+$ diff -u obj/foo.full.ll obj/foo.full.instrumented.ll | /usr/local/bin/wdiff -dn | /usr/local/bin/colordiff
+```
