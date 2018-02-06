@@ -61,17 +61,16 @@ $ export PATH=/path/to/llvm-prov/source/scripts:$PATH
 
 ## Build FreeBSD tools
 
-First, check out our version of FreeBSD with I/O metadata and build `world`
-normally to make sure we have the right system calls in `libc`, etc.:
+Check out our version of FreeBSD with I/O metadata support and build `world`:
 
 ```sh
-$ git clone https://github.com/cadets/freebsd -b loom freebsd-loom
-$ cd freebsd-loom
-$ make -jX buildworld
+$ git clone https://github.com/cadets/freebsd -b llprov freebsd-llprov
+$ cd freebsd-llprov
+$ llvm-prov-make buildworld     # I often like to append: -j8 2>&1 | tee build.log
 ```
 
-Then, use the `llvm-prov-make` script to enter a build environment
-within the FreeBSD source tree:
+Then, to play with instrumentation of a specific tool, use the `llvm-prov-make`
+script to enter a build environment within the FreeBSD source tree:
 
 ```sh
 $ llvm-prov-make buildenv
