@@ -27,6 +27,11 @@ fi
 export NO_WERROR=
 export WERROR=
 
+# Disable src.conf and src-env.conf, as they are unlikely to compose well with
+# our build-system customizations.
+unset SRCCONF
+unset SRC_ENV_CONF
+
 # Enable instrumentation
 export WITH_INSTRUMENT_BINARIES=yes
 
