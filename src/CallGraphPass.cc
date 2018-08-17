@@ -1,6 +1,6 @@
 //! @file CallGraphPass.cc  @b opt pass to graph data flows
 /*
- * Copyright (c) 2016-2017 Jonathan Anderson
+ * Copyright (c) 2016-2018 Jonathan Anderson
  * All rights reserved.
  *
  * This software was developed by BAE Systems, the University of Cambridge
@@ -91,8 +91,10 @@ bool CallGraphPass::runOnModule(Module &M)
   assert(Format);
 
   std::error_code Err;
-  raw_fd_ostream FlowGraph(Format->Filename((M.getName() + ".callgraph").str()),
-      Err, sys::fs::OpenFlags::F_RW | sys::fs::OpenFlags::F_Text);
+  raw_fd_ostream FlowGraph(Format->Filename((M.getName() + ".callgraph").str()), Err,
+      sys::fs::CreationDisposition::CD_CreateAlways,
+      sys::fs::FileAccess::FA_Read | sys::fs::FileAccess::FA_Write,
+      sys::fs::OpenFlags::F_Text);
 
   if (Err) {
     errs() << "Error opening graph file: " << Err.message() << "\n";

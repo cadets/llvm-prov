@@ -1,6 +1,6 @@
 //! @file GraphFlowsPass.cc  @b opt pass to graph data flows
 /*
- * Copyright (c) 2016-2017 Jonathan Anderson
+ * Copyright (c) 2016-2018 Jonathan Anderson
  * All rights reserved.
  *
  * This software was developed by BAE Systems, the University of Cambridge
@@ -214,7 +214,9 @@ bool GraphFlowsModulePass::runOnModule(Module &M)
 {
   std::error_code Err;
   raw_fd_ostream FlowGraph(FlowOutputFilename, Err,
-      sys::fs::OpenFlags::F_RW | sys::fs::OpenFlags::F_Text);
+      sys::fs::CreationDisposition::CD_CreateAlways,
+      sys::fs::FileAccess::FA_Read | sys::fs::FileAccess::FA_Write,
+      sys::fs::OpenFlags::F_Text);
 
   if (Err) {
     errs() << "Error opening graph file: " << Err.message() << "\n";
