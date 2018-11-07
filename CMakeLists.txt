@@ -36,3 +36,4 @@ set(LLVM_ENABLE_WARNINGS TRUE)
 
 add_subdirectory(src)
 add_subdirectory(test)
+add_subdirectory(scripts)
